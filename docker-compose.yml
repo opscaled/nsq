@@ -1,22 +1,61 @@
 version: '2'
 services:
-   nsqlookupd:
-     image: nsqio/nsq
-     ports:
-       - "4160:4160"
-       - "4161:4161"
-     command: /nsqlookupd -broadcast-address=172.17.0.1
+ nsqlookupd:
+  image: nsqio/nsq
+  ports:
+    - "4160:4160"
+    - "4161:4161"
+  command: /nsqlookupd
 
-   nsqd:
-     image: nsqio/nsq
-     ports:
-       - "4150:4150"
-       - "4151:4151"
-     command: /nsqd -broadcast-address=172.17.0.1  -lookupd-tcp-address=172.17.0.1:4160
+ nsqd:
+  image: nsqio/nsq
+  ports:
+    - "4150:4150"
+    - "4151"
+  links:
+    - nsqlookupd:nsqlookupd
+  command: /nsqd --lookupd-tcp-address=nsqlookupd:4160 
 
-   nsqadmin:
-     image: nsqio/nsq
-     ports:
-       - "4171:4171"
-     command: /nsqadmin -lookupd-http-address=172.17.0.1:4161
+ nsqadmin:
+  image: nsqio/nsq
+  ports:
+    - "4171:4171"
+  links:
+    - nsqlookupd:nsqlookupd
+  command: /nsqadmin --lookupd-http-address=nsqlookupd:4161
 
+ resize:
+  image: nsqio/nsq
+  links:
+    - nsqlookupd:nsqlookupd
+  command: /nsq_to_http --topic=resize --channel=channel1 --get "http://mintshowapp.com/m/nsq/resizensq?data=%s" --lookupd-http-address=nsqlookupd:4161 -n=100
+ 
+ email_notify:
+  image: nsqio/nsq
+  links:
+    - nsqlookupd:nsqlookupd
+  command: /nsq_to_http --topic=emailnotify --channel=emailchannel --get "http://mintshowapp.com/m/nsq/bio_achieving_status_update?data=%s" --lookupd-http-address=nsqlookupd:4161 -n=100
+ 
+ spy_notify:
+  image: nsqio/nsq
+  links:
+    - nsqlookupd:nsqlookupd
+  command: /nsq_to_http --topic=spynotify --channel=spychannel --get "http://mintshowapp.com/m/nsq/spy_notify_update?data=%s" --lookupd-http-address=nsqlookupd:4161 -n=100
+ 
+ solr:
+  image: nsqio/nsq
+  links:
+    - nsqlookupd:nsqlookupd
+  command: /nsq_to_http --topic=solr --channel=solrchannel --get "http://mintshowapp.com/m/nsq/solr?data=%s" --lookupd-http-address=nsqlookupd:4161 -n=100
+
+ nsqtest:
+  image: nsqio/nsq
+  links:
+    - nsqlookupd:nsqlookupd
+  command: /nsq_to_http --topic=nsqtest --channel=nsqtestchannel --get "http://mintshowapp.com/m/nsq/nsqtest?data=%s" --lookupd-http-address=nsqlookupd:4161 -n=100
+
+ imgdelete:
+  image: nsqio/nsq
+  links:
+    - nsqlookupd:nsqlookupd
+  command: /nsq_to_http --topic=imgdelete --channel=imgdelete --get "http://mintshowapp.com/m/nsq/imgdelete?data=%s" --lookupd-http-address=nsqlookupd:4161 -n=100
